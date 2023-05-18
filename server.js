@@ -19,27 +19,35 @@ class User {
 }
 
 class Game {
-    constructor(bigBlind, button) {
+    constructor(bigBlindUser, buttonUser) {
         this.id = Math.floor(Math.random() * 1000000)
         // bigBlind and button are instances of User
-        this.bigBlind = bigBlind
-        this.button = button
-        bigBlind.currentGame = this
-        button.currentGame = this
+        this.bigBlindUser = bigBlindUser
+        this.buttonUser = buttonUser
+        bigBlindUser.currentGame = this
+        buttonUser.currentGame = this
 
-        this.bigBlindStack = 10000
-        this.buttonStack = 1000
+        this.bigBlind = {
+            socket: bigBlindUser.socket,
+            username: bigBlindUser.username,
+            stack: 1000,
+            postedBlind: false,
+            alreadyIn: 0
+        }
 
+        this.button = {
+            socket: buttonUser.socket,
+            username: buttonUser.username,
+            stack: 1000,
+            postedBlind: false,
+            alreadyIn: 0
+        }
+
+        this.actionOn = this.button
         this.bet = undefined
         this.previousBet = undefined
         this.pot = 0
-        this.bigBlindAlreadyIn = 0
-        this.buttonAlreadyIn = 0
-        this.smallBlindPosted = false
-        this.bigBlindPosted = false
         this.street = 'preflop'
-        this.previousBet = undefined
-        this.optionExists = true
     }
 
     toString = function() {
@@ -50,10 +58,10 @@ class Game {
         const state = {
             bigBlind: this.bigBlind.username,
             button: this.button.username,
-            bigBlindStack: this.bigBlindStack,
-            buttonStack: this.buttonStack,
-            bigBlindAlreadyIn: this.bigBlindAlreadyIn,
-            buttonAlreadyIn: this.buttonAlreadyIn,
+            bigBlindStack: this.bigBlind.stack,
+            buttonStack: this.button.stack,
+            bigBlindAlreadyIn: this.bigBlind.alreadyIn,
+            buttonAlreadyIn: this.button.alreadyIn,
             pot: this.pot
         }
         return state
@@ -72,11 +80,11 @@ class Game {
 
     processCall = function() {
         this.pot += 2 * this.bet
-        this.bigBlindStack -= this.bet
-        this.buttonStack -= this.bet
+        this.bigBlind.stack -= this.bet
+        this.button.stack -= this.bet
         this.previousBet = undefined
-        this.bigBlindAlreadyIn = 0
-        this.buttonAlreadyIn = 0
+        this.bigBlind.alreadyIn = 0
+        this.button.alreadyIn = 0
         this.bigBlind.socket.emit('call', this.getState())
         this.button.socket.emit('call', this.getState())
         this.nextStreet()
@@ -212,19 +220,19 @@ io.on('connection', (socket) => {
         let nextToAct = null
         let nextStack = 0
         let leftToCall = 0
-        if (user == game.bigBlind) {
+        if (user == game.bigBlindUser) {
             console.log('user is big blind')
             nextToAct = game.button
-            nextStack = game.buttonStack
-            game.bigBlindAlreadyIn = bet
-            leftToCall = Math.min(bet - game.buttonAlreadyIn, game.buttonStack - game.buttonAlreadyIn)
+            nextStack = game.button.stack
+            game.bigBlind.alreadyIn = bet
+            leftToCall = Math.min(bet - game.button.alreadyIn, game.button.stack - game.button.alreadyIn)
         } else {
             console.log('user is button')
             nextToAct = game.bigBlind
-            nextStack = game.bigBlindStack
-            game.buttonAlreadyIn = bet
-            console.log(game.buttonAlreadyIn)
-            leftToCall = Math.min(bet - game.bigBlindAlreadyIn, game.bigBlindStack - game.bigBlindAlreadyIn)
+            nextStack = game.bigBlind.stack
+            game.button.alreadyIn = bet
+            console.log(game.button.alreadyIn)
+            leftToCall = Math.min(bet - game.bigBlind.alreadyIn, game.bigBlind.stack - game.bigBlind.alreadyIn)
         }
 
         game.bigBlind.socket.emit('update', game.getState())
@@ -232,33 +240,33 @@ io.on('connection', (socket) => {
 
         if (bet == 'small blind') {
             console.log('small blind posted')
-            game.smallBlindPosted = true
-            if (game.bigBlindPosted) {
-                game.button.socket.emit('action', createOptions(20, 10, 20, game.pot, game.buttonStack))
+            game.button.postedBlind = true
+            if (game.bigBlind.postedBlind) {
+                game.button.socket.emit('action', createOptions(20, 10, 20, game.pot, game.button.stack))
                 game.previousBet = 20
             }
             return
         }
         if (bet == 'big blind') {
             console.log('big blind posted')
-            game.bigBlindPosted = true
-            if (game.smallBlindPosted) {
-                game.button.socket.emit('action', createOptions(20, 10, 20, game.pot, game.buttonStack))
+            game.bigBlind.postedBlind = true
+            if (game.button.postedBlind) {
+                game.button.socket.emit('action', createOptions(20, 10, 20, game.pot, game.button.stack))
                 game.previousBet = 20
             }
             return
         }
         if (bet == 0) {
-            if (user == game.button) {
+            if (user == game.buttonUser) {
                 console.log('check back')
                 console.log('pot: ' + game.pot)
-                game.bigBlind.socket.emit('action', createOptions(0, 0, 0, game.pot, game.bigBlindStack))
+                game.bigBlind.socket.emit('action', createOptions(0, 0, 0, game.pot, game.bigBlind.stack))
                 game.previousBet = undefined
                 game.nextStreet()
                 return
             }
             console.log('check')
-            game.button.socket.emit('action', createOptions(0, 0, 0, game.pot, game.buttonStack))
+            game.button.socket.emit('action', createOptions(0, 0, 0, game.pot, game.button.stack))
             game.previousBet = 0
             return
         }   
@@ -266,7 +274,7 @@ io.on('connection', (socket) => {
             console.log('call ' + bet)
             console.log('pot: ' + game.pot)
             game.processCall()
-            game.bigBlind.socket.emit('action', createOptions(0, 0, 0, game.pot, game.bigBlindStack))
+            game.bigBlind.socket.emit('action', createOptions(0, 0, 0, game.pot, game.bigBlind.stack))
             return
         }
         
