@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <button id="login-button">login</button>
+    <div id="lobby">
+        <h4>click a name to send a challenge!</h4>
+        <ul id="lobby-list"></ul>
+    </div>
+    <div id="gamescreen">
+        <div id="his-name-plate"></div>
+        <div id="my-name-plate"></div>
+
+        <div class="chip" id="his-chip"></div>
+        <div id="table"></div>
+        <div class="chip" id="pot-chip"></div>
+        <div class="chip" id="my-chip"></div>
+        <div id = "my-pocket">
+            <img class="my-pocket-card" id="mypocket-card1" src="blue.svg">
+            <img class="my-pocket-card" id="mypocket-card2" src="blue.svg">
+        </div>
+        <div id="action-bar">
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
