@@ -73,7 +73,7 @@ li:hover {
 #my-chip {
     position: absolute;
     left: 375px;
-    bottom: 145px;
+    bottom: 155px;
 }
 
 #his-chip {
@@ -97,7 +97,7 @@ li:hover {
     display: flex;
     flex-direction: row;
     left: 305px;
-    bottom: 0;
+    bottom: 10px;
 }
 
 
@@ -109,13 +109,31 @@ li:hover {
     left:0;
     right: 0;
     bottom: 0;
-    height: 50px;
+    height: 60px;
     background-color: gold;
 }
 
 .action-button {
+    width: 90px;
+    height: 60px;
+}
+
+#options-bar {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    left: 10px;
+    bottom: 1px;
+    height: 60px;
     width: 100px;
-    height: 50px;
+    border: none;
+
+}
+
+.options-button {
+    width: 100px;
+    height: 20px;
 }
 
 

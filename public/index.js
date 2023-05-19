@@ -124,21 +124,12 @@ socket.on('new game', state => {
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
     }
-    displayBets(state)
-    /*
-    let hisName = ''
-    let hisStack = 0
-    if (state.bigBlind == sessionStorage.getItem('username')) {
-        hisName = state.button
-        hisStack = state.buttonStack
+    if (sessionStorage.getItem('username') === state.bigBlind) {
         sessionStorage.setItem('myPosition', 'big blind')
     } else {
-        hisName = state.bigBlind
-        hisStack = state.bigBlindStack
         sessionStorage.setItem('myPosition', 'button')
     }
-    his_name_plate.innerText = hisName + '\n' + hisStack
-    */
+    displayBets(state)
 })
 
 socket.on('update', state => {
@@ -155,7 +146,6 @@ socket.on('post small blind', () => {
         button.betValue = x.value
         action_bar.appendChild(button)
     })
-    sessionStorage.setItem('myPosition', 'button')
 })
 
 socket.on('post big blind', () => {
@@ -167,7 +157,6 @@ socket.on('post big blind', () => {
         button.betValue = x.value
         action_bar.appendChild(button)
     })
-    sessionStorage.setItem('myPosition', 'big blind')
 })
 
 socket.on('action', options => {
