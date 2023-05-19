@@ -2,7 +2,6 @@
   "name": "hufr",
   "version": "1.0.0",
   "description": "poker game -- single page webapp",
-
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
@@ -11,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
+    "pokersolver": "^2.1.4",
     "socket.io": "^4.6.1"
   }
 }

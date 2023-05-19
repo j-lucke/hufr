@@ -28,6 +28,17 @@ const my_name_plate = document.getElementById('my-name-plate')
 const my_chip = document.getElementById('my-chip')
 const his_chip = document.getElementById('his-chip')
 const pot_chip = document.getElementById('pot-chip')
+const sit_out = document.getElementById('sit-out')
+const auto_post = document.getElementById('auto-post')
+const auto_muck = document.getElementById('auto-muck')
+const my_pocket_1 = document.getElementById('my-pocket-1')
+const my_pocket_2 = document.getElementById('my-pocket-2')
+const board = document.getElementById('board')
+const board_1 = document.getElementById('board-1')
+const board_2 = document.getElementById('board-2')
+const board_3 = document.getElementById('board-3')
+const board_4 = document.getElementById('board-4')
+const board_5 = document.getElementById('board-5')
 
 if (sessionStorage.getItem('username')) {
     login_button.innerText = sessionStorage.getItem('username')
@@ -71,6 +82,7 @@ lobby_list.addEventListener('click', (event) => {
 
 })
 
+
 action_bar.addEventListener('click', (event) => {
     const children = Array.from(action_bar.children)
     if (children.includes(event.target)) {
@@ -81,6 +93,14 @@ action_bar.addEventListener('click', (event) => {
     
     }
 
+})
+
+auto_post.addEventListener('click', () => {
+    if (sessionStorage.getItem('auto post') === 'false') {
+        sessionStorage.setItem('auto post', 'true')
+    } else {
+        sessionStorage.setItem('auto post', 'false')
+    }
 })
 
 socket.on('sessionID', sessionID => {
@@ -120,6 +140,9 @@ socket.on('logout', username => {
 })
 
 socket.on('new game', state => {    
+    const boardCards = Array.from(board.children)
+    boardCards.forEach(x => x.setAttribute('src', 'blue.svg'))
+
     const children = Array.from(action_bar.children)
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
@@ -138,6 +161,10 @@ socket.on('update', state => {
 })
 
 socket.on('post small blind', () => {
+    if (sessionStorage.getItem('auto post') === 'true') {
+        socket.emit('action', 'small blind')
+        return
+    }
     const options = [{label: 'post small blind', value: 'small blind'}]
     options.forEach( x => {
         const button = document.createElement('button')
@@ -149,6 +176,10 @@ socket.on('post small blind', () => {
 })
 
 socket.on('post big blind', () => {
+    if (sessionStorage.getItem('auto post') === 'true') {
+        socket.emit('action', 'big blind')
+        return
+    }
     const options = [{label: 'post big blind', value: 'big blind'}]
     options.forEach( x => {
         const button = document.createElement('button')
@@ -171,4 +202,33 @@ socket.on('action', options => {
 
 socket.on('call', state => {
     displayBets(state)
+})
+
+function translate(card) {
+    const r = card[0]
+    const s = card[1]
+    let suit = null;
+    let rank = null;
+    switch (r) {
+        case 'A': rank = 'ace'; break;
+        case 'K': rank = 'king'; break;
+        case 'Q': rank = 'queen'; break;
+        case 'J': rank = 'jack'; break;
+        case 'T': rank = '10'; break;
+        default: rank = r;
+    }
+    switch (s) {
+        case 'd': suit = 'diamonds'; break;
+        case 'c': suit = 'clubs'; break;
+        case 's': suit = 'spades'; break;
+        case 'h': suit = 'hearts'; break;
+    }
+    let src = '../cards/' + suit + '_' + rank + '.svg'
+    return src
+
+}
+
+socket.on('deal', (card, position) => {
+    const img = document.getElementById(position)
+    img.setAttribute('src', translate(card))
 })

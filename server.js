@@ -2,11 +2,34 @@ const path = require('path')
 const express = require('express');
 const app = express();
 const http = require('http');
+const Hand = require('pokersolver').Hand
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public')))
+
+
+const SUITS = ['s', 'h', 'd', 'c']
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
+
+let DECK = []
+
+for (s = 0; s < 4; s++)
+    for (r = 0; r < 13; r++)
+        DECK.push(RANKS[r]+SUITS[s])
+
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
+
+function deal(deck) {
+    const index = getRandomInt(deck.length)
+    const card = deck[index]
+    deck.splice(index, 1)
+    return card
+}
+
 
 class User {
     constructor(socket, sessionID) {
@@ -35,7 +58,8 @@ class Game {
             postedBlind: false,
             alreadyIn: 0,
             hasOption: true,
-            preflopStatus: 'yet to act'
+            preflopStatus: 'yet to act',
+            pocket: []
         }
 
         this.button = {
@@ -44,13 +68,17 @@ class Game {
             stack: buttonUser.stack,
             postedBlind: false,
             alreadyIn: 0,
-            preflopStatus: 'yet to act'
+            preflopStatus: 'yet to act',
+            pocket: []
         }
+
+        this.deck = DECK.slice()
 
         this.actionOn = this.button
         this.bet = undefined
         this.previousBet = undefined
         this.pot = 0
+        this.board = []
         this.street = 'preflop'
         this.winner = null
         this.loser = null
@@ -148,31 +176,67 @@ class Game {
 
     nextStreet = function() {
         switch (this.street) {
-            case 'preflop': this.street = 'flop'; this.bigBlind.socket.emit('action', this.getOptions()); break
-            case 'flop': this.street = 'turn'; this.bigBlind.socket.emit('action', this.getOptions()); break
-            case 'turn': this.street = 'river'; this.bigBlind.socket.emit('action', this.getOptions()); break
+            case 'preflop': 
+                this.street = 'flop'; 
+                this.bigBlind.socket.emit('action', this.getOptions()); 
+                this.dealFlop();
+                break
+            case 'flop': 
+                this.street = 'turn'; 
+                this.bigBlind.socket.emit('action', this.getOptions()); 
+                this.dealTurn()
+                break
+            case 'turn': 
+                this.street = 'river'; 
+                this.bigBlind.socket.emit('action', this.getOptions()); 
+                this.dealRiver();
+                break
             case 'river': this.street = 'showdown'; break
             case 'showdown': this.street = 'done'; break
         }
         console.log('--- ' + this.street + ' ---' + `[${this.pot}]`)
         if (this.street === 'showdown') {
             this.showdown()    
+            return
         }
         if (this.street === 'done') {
+
             startNewGame(new Game(this.buttonUser, this.bigBlindUser))
         }
     }
 
+    findWinner = function() {
+        const buttonHand = Hand.solve(this.button.pocket.concat(this.board))
+        const bigBlindHand = Hand.solve(this.bigBlind.pocket.concat(this.board))
+
+        console.log(this.bigBlind.username + ' has ' + bigBlindHand.descr)
+        console.log(this.button.username + ' has ' + buttonHand.descr)
+
+        const winner = Hand.winners([buttonHand, bigBlindHand])
+        const bigBlindIsWinner = (winner.toString() == bigBlindHand.toString())
+        const buttonIsWinner = (winner.toString() == buttonHand.toString())
+        const chop = (bigBlindIsWinner && buttonIsWinner)
+        if (chop) return 'chop'
+        if (bigBlindIsWinner) return 'big blind'
+        if (buttonIsWinner) return 'button'
+        return 'error' 
+    }
+
     showdown = function() {
         const rand = Math.random()
-        console.log(rand)
-        if (rand < 0.5){
+        const result = this.findWinner()
+        if (result === 'big blind'){
             this.winner = this.bigBlind
             this.loser = this.button
-        } else {
+        } 
+        if (result === 'button') {
             this.winner = this.button
             this.loser = this.bigBlind
         }
+        if (result === 'chop') {
+
+        }
+    
         this.winner.stack += this.pot
         console.log(this.winner.username + ' wins ' + this.pot)
         this.bigBlindUser.stack = this.bigBlind.stack
@@ -224,6 +288,45 @@ class Game {
         this.buttonUser.stack = this.button.stack
         startNewGame(new Game(this.buttonUser, this.bigBlindUser))
     }
+
+    dealHoleCards = function() {
+        this.button.pocket.push(deal(this.deck))
+        this.button.pocket.push(deal(this.deck))
+        this.bigBlind.pocket.push(deal(this.deck))
+        this.bigBlind.pocket.push(deal(this.deck))
+
+        this.button.socket.emit('deal', this.button.pocket[0], 'my-pocket-1')
+        this.button.socket.emit('deal', this.button.pocket[1], 'my-pocket-2')
+        this.bigBlind.socket.emit('deal', this.bigBlind.pocket[0], 'my-pocket-1')
+        this.bigBlind.socket.emit('deal', this.bigBlind.pocket[1], 'my-pocket-2')
+    }
+
+    dealFlop = function() {
+        this.board.push(deal(this.deck))
+        this.board.push(deal(this.deck))
+        this.board.push(deal(this.deck))
+
+        this.button.socket.emit('deal', this.board[0], 'board-1')
+        this.bigBlind.socket.emit('deal', this.board[0], 'board-1')
+        this.button.socket.emit('deal', this.board[1], 'board-2')
+        this.bigBlind.socket.emit('deal', this.board[1], 'board-2')
+        this.button.socket.emit('deal', this.board[2], 'board-3')
+        this.bigBlind.socket.emit('deal', this.board[2], 'board-3')
+
+    }
+
+    dealTurn = function() {
+        this.board.push(deal(this.deck))
+        this.bigBlind.socket.emit('deal', this.board[3], 'board-4')
+        this.button.socket.emit('deal', this.board[3], 'board-4')
+    }
+
+    dealRiver = function() {
+        this.board.push(deal(this.deck))
+        this.bigBlind.socket.emit('deal', this.board[4], 'board-5')
+        this.button.socket.emit('deal', this.board[4], 'board-5')
+
+    }
 }
 
 const users = []
@@ -241,10 +344,11 @@ function getPlayers() {
 
 
 function startNewGame(game) {
+    console.log('\n' + '\n')
     console.log('new game: ' + game.toString())
     game.bigBlind.socket.emit('new game', game.getState())
-    game.bigBlind.socket.emit('post big blind')
     game.button.socket.emit('new game', game.getState())
+    game.bigBlind.socket.emit('post big blind')
     game.button.socket.emit('post small blind')
 }
 
@@ -346,7 +450,8 @@ io.on('connection', (socket) => {
             game.button.alreadyIn = 10
             game.bigBlind.socket.emit('update', game.getState())
             game.button.socket.emit('update', game.getState())
-            if (game.bigBlind.postedBlind) {
+            if (game.bigBlind.postedBlind && game.button.postedBlind) {
+                game.dealHoleCards()
                 game.bet = 'big blind'
                 console.log('--- preflop ---')
                 game.button.socket.emit('action', game.getOptions())
@@ -360,7 +465,8 @@ io.on('connection', (socket) => {
             game.bigBlind.alreadyIn = 20
             game.bigBlind.socket.emit('update', game.getState())
             game.button.socket.emit('update', game.getState())
-            if (game.button.postedBlind) {
+            if (game.button.postedBlind && game.bigBlind.postedBlind) {
+                game.dealHoleCards()
                 game.bet = 'big blind'
                 console.log('--- preflop ---')
                 game.button.socket.emit('action', game.getOptions())
