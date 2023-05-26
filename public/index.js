@@ -117,7 +117,6 @@ function displayMy() {
         my_chip.style.display = 'block'
         my_name_plate.innerText = my.name + '\n' + (my.stack - my.alreadyIn)
     } else {
-        my_chip.style.display = 'none'
         my_name_plate.innerText = my.name + '\n' + my.stack
     }
 }
@@ -148,7 +147,6 @@ function displayHis() {
         his_chip.style.display = 'block'
         his_name_plate.innerText = his.name + '\n' + (his.stack - his.alreadyIn)
     } else {
-        his_chip.style.display = 'none'
         his_name_plate.innerText = his.name + '\n' + his.stack
     }
 }
@@ -343,6 +341,12 @@ function translate(card) {
 }
 
 socket.on('deal', (card, position) => {
+    if (his.alreadyIn === 0) {
+        his_chip.style.display = 'none'
+    }
+    if (my.alreadyIn === 0) {
+        my_chip.style.display = 'none'
+    }
     const img = document.getElementById(position)
     img.setAttribute('src', translate(card))
 })
