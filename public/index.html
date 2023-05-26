@@ -14,11 +14,16 @@
         <ul id="lobby-list"></ul>
     </div>
     <div id="gamescreen">
+
         <div id="his-name-plate"></div>
         <div id="my-name-plate"></div>
 
         <div class="chip" id="his-chip"></div>
         <div id="table"></div>
+        <div id="his-pocket">
+            <img class="his-pocket-card" id="his-pocket-1" src="blue.svg">
+            <img class="his-pocket-card" id="his-pocket-2" src="blue.svg">
+        </div>
         <div id="board">
             <img class="board-card" id="board-1" src="blue.svg">
             <img class="board-card" id="board-2" src="blue.svg">
@@ -26,6 +31,7 @@
             <img class="board-card" id="board-4" src="blue.svg">
             <img class="board-card" id="board-5" src="blue.svg">
         </div>
+        <div id="button" class="my-button">D</div>
         <div class="chip" id="pot-chip"></div>
         <div class="chip" id="my-chip"></div>
         <div id = "my-pocket">
@@ -38,7 +44,6 @@
             <button id="auto-post" class="options-button">auto post</button>
             <button id="auto-muck" class="options-button">auto muck</button>
         </div>
-
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

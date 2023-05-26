@@ -34,7 +34,7 @@ li:hover {
     display: flex;
     flex-direction: column;
     width: 100px;
-    left: 350px;
+    left: 220px;
     top: 5px;
     text-align: center;
 }
@@ -100,6 +100,19 @@ li:hover {
     bottom: 260px;
 }
 
+.his-pocket-card {
+    height: 70px;
+}
+
+#his-pocket {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    left: 350px;
+    top: 0;
+    border: none;
+}
+
 .my-pocket-card {
     height: 140px;
 }
@@ -146,6 +159,40 @@ li:hover {
 .options-button {
     width: 100px;
     height: 20px;
+}
+
+
+#bet-input-button {
+    margin-left: 20px;
+}
+
+#bet-input {
+    width: 60px;
+    height: 20px;
+}
+
+.his-button{
+    position: absolute;
+    left: 320px;
+    top: 65px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: yellow;
+    text-align: center;
+    line-height: 20px;
+}
+
+.my-button {
+    position: absolute;
+    left: 330px;
+    bottom: 155px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: yellow;
+    text-align: center;
+    line-height: 20px;
 }
 
 
