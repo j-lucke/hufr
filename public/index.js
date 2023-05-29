@@ -20,6 +20,7 @@ actionButton.addEventListener('click', () => {
     socket.emit('action', bet)
 })
 
+const body = document.querySelector('body')
 const lobby_list = document.getElementById('lobby-list')
 const login_button = document.getElementById('login-button')
 const action_bar = document.getElementById('action-bar')
@@ -51,12 +52,18 @@ const my = {
     name: sessionStorage.getItem('username'),
     stack: undefined,
     alreadyIn: undefined,
+    status: undefined
 }
 
 const his = {
     name: undefined,
     stack: undefined,
     alreadyIn: undefined,
+    status: undefined
+}
+
+if (sessionStorage.getItem('status') === 'playing') {
+    socket.emit('recover')
 }
 
 let bet = 0
@@ -211,8 +218,35 @@ auto_post.addEventListener('click', () => {
     }
 })
 
+sit_out.addEventListener('click', () => {
+    const text = sit_out.innerText
+    if (text === 'sit out') {
+        sit_out.innerText = 'rejoin'
+        socket.emit('stand up')
+        return
+    }
+    if (text === 'rejoin') {
+        sit_out.innerText = 'sit out'
+        socket.emit('sit down')
+        return
+    }
+})
 
 
+
+socket.on('message', message => {
+    const div = document.createElement('div')
+    div.setAttribute('class', 'message-box')
+    div.innerText = message
+    const button = document.createElement('button')
+    button.innerText = 'OK'
+    div.appendChild(button)
+    body.appendChild(div)
+
+    button.addEventListener('click', () => {
+        div.remove()
+    })
+})
 
 socket.on('sessionID', sessionID => {
     sessionStorage.setItem('sessionID', sessionID)
@@ -250,9 +284,45 @@ socket.on('logout', username => {
     }
 })
 
+socket.on('challenge', challenger => {
+    console.log('challenge!!!')
+    const div = document.createElement('div')
+    div.setAttribute('class', 'message-box')
+    div.innerText = challenger + ' has challenged you to play heads up for rolls'
+    console.log(div)
+    const button1 = document.createElement('button')
+    const button2 = document.createElement('button')
+    button1.innerText = 'accept'
+    button2.innerText = 'decline'
+    div.appendChild(button1)
+    div.appendChild(button2)
+    body.appendChild(div)
+    console.log(body)
+
+    div.addEventListener('click', (event) => {
+        if (event.target === button1) {
+            socket.emit('accepted', challenger)
+        } 
+        if (event.target === button2) {
+            socket.emit('declined', challenger)
+        }
+        div.remove()
+    })
+})
+
+socket.on('accepted', challengee => {
+    alert(challengee + ' has accepted your challenge.')
+})
+
+socket.on('declined', challengee => {
+    alert(challengee + ' has declined your challenge.')
+
+})
+
 socket.on('new game', state => {    
+    sessionStorage.setItem('status', 'playing')
     const boardCards = Array.from(board.children)
-    boardCards.forEach(x => x.setAttribute('src', 'blue.svg'))
+    boardCards.forEach(x => x.style.display = 'none')
     his_pocket_1.setAttribute('src', 'blue.svg')
     his_pocket_2.setAttribute('src', 'blue.svg')
     while (action_bar.firstChild) {
@@ -270,9 +340,24 @@ socket.on('new game', state => {
 })
 
 socket.on('update', state => {
+    if (sessionStorage.getItem('username') === state.bigBlind) {
+        sessionStorage.setItem('myPosition', 'big blind')
+        dealerButton.setAttribute('class', 'his-button')
+    } else {
+        sessionStorage.setItem('myPosition', 'button')
+        dealerButton.setAttribute('class', 'my-button')
+    }
     console.log('update')
     parseState(state)
     display()
+})
+
+socket.on('sit down', () => {
+    his_chip.innerText = 'ready'
+})
+
+socket.on('stand up', () => {
+    his_name_plate.innerText = 'SITTING OUT'
 })
 
 socket.on('post small blind', () => {
@@ -349,6 +434,7 @@ socket.on('deal', (card, position) => {
     }
     const img = document.getElementById(position)
     img.setAttribute('src', translate(card))
+    img.style.display = 'block'
 })
 
 socket.on('rebuy', (state) => {
@@ -363,10 +449,15 @@ socket.on('rebuy', (state) => {
 })
 
 socket.on('game over', message => {
+    sessionStorage.setItem('status', 'waiting')
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
     }
     action_bar.innerText = message
+    my_chip.style.display = 'none'
+    his_chip.style.display = 'none'
+    pot_chip.style.display = 'none'
+    
 })
 
 socket.on('fold', () => {

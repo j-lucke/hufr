@@ -37,8 +37,10 @@ class User {
         this.sessionID = sessionID
         this.connectionStatus = 'connected'
         this.username = undefined
+        this.opponent = null
         this.currentGame = null
         this.stack = 1000
+        this.isNextButton = undefined
     }
 }
 
@@ -76,6 +78,7 @@ class Game {
 
         this.actionOn = this.button
         this.bet = undefined
+        this.bettor = null
         this.previousBet = undefined
         this.pot = 0
         this.board = []
@@ -114,7 +117,7 @@ class Game {
         let leftToCall = this.bet - this.actionOn.alreadyIn
         if (leftToCall === 0) {
             options[0] = {label: 'check', value: 20}
-            options[1] = {label: 'raise min' + '\n' + '20', value: 20}
+            options[1] = {label: 'raise min!' + '\n' + '20', value: 20}
             const newPot = 3 * this.bet + this.pot
             if (newPot === 0) {
                 return options
@@ -128,6 +131,10 @@ class Game {
         } 
 
         options[0] = {label: 'fold', value: undefined}
+        if (this.bet === this.bettor.stack) {
+            options[1] = {label: 'call' + '\n' + this.bet, value: this.bet}
+            return options
+        }
         if (this.bet < this.actionOn.stack) {
             options[1] = {label: 'call' + '\n' + leftToCall, value: this.bet}
         } else {
@@ -136,13 +143,15 @@ class Game {
             return options
         }
 
+        console.log('bet: ' + this.bet + '    previous: ' + this.previousBet)
+
         let delta = this.bet - this.previousBet
         if (facingBigBlind){
             delta = 20
         }
         const min = this.bet + delta
         if (min < this.actionOn.stack) {
-            options[2] = {label: 'raise min' + '\n' + 2*delta, value: min}  
+            options[2] = {label: 'raise min!!' + '\n' + 2*delta, value: min}  
         } else {
             options[2] = {label: 'all in' + '\n' + this.actionOn.stack, value: this.actionOn.stack}
             return options
@@ -171,7 +180,8 @@ class Game {
             bigBlindAlreadyIn: this.bigBlind.alreadyIn,
             buttonAlreadyIn: this.button.alreadyIn,
             pot: this.pot,
-            bet: this.bet
+            bet: this.bet,
+            board: this.board
         }
         return state
     }
@@ -212,7 +222,25 @@ class Game {
         if (this.street === 'done') {
             this.bigBlind.socket.emit('game over', this.wrapUpMessage)
             this.button.socket.emit('game over', this.wrapUpMessage)
-            setTimeout( () => startNewGame(new Game(this.buttonUser, this.bigBlindUser)), 5000)
+            this.buttonUser.currentGame = null
+            this.bigBlindUser.currentGame = null
+            setTimeout( () => {
+                let someoneStanding = false
+                if (this.bigBlindUser.status === 'standing') {
+                    someoneStanding = true
+                    this.button.socket.emit('stand up')
+                }
+                if (this.buttonUser.status === 'standing') {
+                    someoneStanding = true
+                    this.bigBlind.socket.emit('stand up')
+                }
+                if (someoneStanding) {
+                    this.buttonUser.isNextButton = false
+                    this.bigBlindUser.isNextButton = true
+                    return
+                }
+                startNewGame(new Game(this.buttonUser, this.bigBlindUser))
+            }, 5000)
         }
     }
 
@@ -285,6 +313,7 @@ class Game {
         this.bigBlind.alreadyIn = 0
         this.button.alreadyIn = 0
         this.bet = 0
+        this.actionOn = this.bigBlind
         setTimeout( () => {
             if (this.noFurtherAction) {
                 this.runToShowdown()
@@ -358,7 +387,30 @@ class Game {
 
         this.bigBlindUser.stack = this.bigBlind.stack
         this.buttonUser.stack = this.button.stack
-        setTimeout( () => startNewGame(new Game(this.buttonUser, this.bigBlindUser)), 1000)
+
+        this.bigBlindUser.currentGame = null
+        this.buttonUser.currentGame = null
+
+        this.bigBlindUser.socket.emit('game over', 'somebody folded')
+        this.buttonUser.socket.emit('game over', 'somebody folded')
+        
+        setTimeout( () => {
+            let someoneStanding = false
+            if (this.bigBlindUser.status === 'standing') {
+                someoneStanding = true
+                this.button.socket.emit('stand up')
+            }
+            if (this.buttonUser.status === 'standing') {
+                someoneStanding = true
+                this.bigBlind.socket.emit('stand up')
+            }
+            if (someoneStanding) {
+                this.buttonUser.isNextButton = false
+                this.bigBlindUser.isNextButton = true
+                return
+            }
+            startNewGame(new Game(this.buttonUser, this.bigBlindUser))
+        }, 1000)
     }
 
     dealHoleCards = function() {
@@ -468,9 +520,28 @@ io.on('connection', (socket) => {
 
     socket.on('login', username => {
         user.username = username
+        user.status = 'in lobby'
         io.emit('login', username)
     })
 
+    socket.on('sit down', () => {
+        user.status = 'sitting'
+        user.opponent.socket.emit('sit down')
+        if ((!user.currentGame) && (user.opponent.status === 'sitting')){
+            let game = null
+            if (user.isNextButton) {
+                game = new Game(user.opponent, user)
+            } else {
+                game = new Game(user, user.opponent)
+            }
+            startNewGame(game)
+        }
+    })
+
+    socket.on('stand up', () => {
+        user.status = 'standing'
+    })
+    
     socket.on('logout', () => {
         io.emit('logout', user.username)
         delete user.username
@@ -492,8 +563,33 @@ io.on('connection', (socket) => {
 
     socket.on('challenge', challengee => {
         const opponent = users.find(x => x.username == challengee)
-        game = new Game(user, opponent)
-        startNewGame(game)
+        if (opponent.status != 'playing') {
+            opponent.socket.emit('challenge', user.username)
+        } else {
+            socket.emit('message', challengee + ' is busy defending his roll against someone else!')
+        }
+    })
+
+    socket.on('accepted', challenger => {
+        const otherDude = users.find(x => x.username === challenger)
+        if (otherDude) {
+            otherDude.socket.emit('accepted', user.username)
+            setTimeout( () => {
+                user.status = 'sitting'
+                user.opponent = otherDude
+                otherDude.status = 'sitting'
+                otherDude.opponent = user
+                game = new Game(user, otherDude)
+                startNewGame(game)
+            }, 3000)
+        }
+    })
+
+    socket.on('declined', challenger => {
+        const otherDude = users.find(x => x.username === challenger)
+        if (otherDude) {
+            otherDude.socket.emit('declined', user.username)
+        }
     })
 
     socket.on('rebuy', () => {
@@ -513,19 +609,55 @@ io.on('connection', (socket) => {
         game.button.socket.emit('post small blind')
     })
 
+    socket.on('recover', () => {
+        const game = user.currentGame
+        
+        console.log('recover requested by ' + user.username)
+        if (!game) {
+            console.log('no game')
+            return
+        }
+        
+        console.log('action is on ' + game.actionOn.username)
+
+        if (game.bigBlind.username === user.username) {
+            game.bigBlind.socket = socket
+            socket.emit('deal', game.bigBlind.pocket[0], 'my-pocket-1')
+            socket.emit('deal', game.bigBlind.pocket[1], 'my-pocket-2')
+        } else {
+            game.button.socket = socket
+            socket.emit('deal', game.button.pocket[0], 'my-pocket-1')
+            socket.emit('deal', game.button.pocket[1], 'my-pocket-2')
+
+        }
+        socket.emit('update', game.getState())
+        let count = 1
+        game.board.forEach(card => {
+            socket.emit('deal', card, 'board-' + count)
+            count++
+        })
+        if (game.actionOn.username === user.username) {
+            console.log(game.getOptions())
+            socket.emit('action', game.getOptions())
+        }
+    })
+
     socket.on('action', bet => {
         const game = user.currentGame
+        game.previousBet = game.bet
         game.bet = bet
         let nextToAct = null
         let nextStack = 0
         let leftToCall = 0
         if (user == game.bigBlindUser) {
+            game.bettor = game.bigBlind
             nextToAct = game.button
             nextStack = game.button.stack
             if (bet !== null) {
                 game.bigBlind.alreadyIn = bet
             }
         } else {
+            game.bettor = game.button
             nextToAct = game.bigBlind
             nextStack = game.bigBlind.stack
             if (bet !== null) {
@@ -615,7 +747,7 @@ io.on('connection', (socket) => {
             game.previousBet = 0     // don't want to pass undefined to createOptions
             game.actionOn = nextToAct
             nextToAct.socket.emit('action', game.getOptions())
-            game.previousBet = bet
+           // game.previousBet = bet
             return
         }
         // all in for less
@@ -629,7 +761,7 @@ io.on('connection', (socket) => {
             console.log('raise to ' + bet)
             game.actionOn = nextToAct
             nextToAct.socket.emit('action', game.getOptions())
-            game.previousBet = bet
+           // game.previousBet = bet
             return
         }
     })

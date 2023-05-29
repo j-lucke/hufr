@@ -16,6 +16,18 @@ li:hover {
     cursor: pointer;
 }
 
+.message-box{
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    height: 200px;
+    position: fixed;
+    left: 30%;
+    top: 30%;
+    background-color: yellow;
+    z-index: 10;
+}
+
 #lobby{
     background-color:lavenderblush;
     width: 300px;
@@ -83,18 +95,21 @@ li:hover {
 }
 
 #my-chip {
+    display: none;
     position: absolute;
     left: 375px;
     bottom: 155px;
 }
 
 #his-chip {
+    display: none;
     position: absolute;
     left: 375px;
     top: 60px;
 }
 
 #pot-chip {
+    display: none;
     position: absolute;
     left: 560px;
     bottom: 260px;
