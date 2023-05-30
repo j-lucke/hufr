@@ -217,7 +217,7 @@ class Game {
             setTimeout(() => {
                 this.showdown()    
                 return
-            }, 1000)
+            }, 2000)
         }
         if (this.street === 'done') {
             this.bigBlind.socket.emit('game over', this.wrapUpMessage)
@@ -288,6 +288,10 @@ class Game {
 
         if (result !== 'chop') {
             this.winner.stack += this.pot
+            setTimeout( () => {
+                this.winner.socket.emit('you win', this.pot)
+                this.loser.socket.emit('you lose', this.pot)    
+            }, 1000)
             console.log(this.winner.username + ' wins ' + this.pot)
             this.bigBlindUser.stack = this.bigBlind.stack
             this.buttonUser.stack = this.button.stack
@@ -300,12 +304,13 @@ class Game {
             console.log('chop')
             console.log(this.bigBlindUser.stack, this.buttonUser.stack)
         }
-        this.bigBlind.socket.emit('update', this.getState())
-        this.button.socket.emit('update', this.getState())
+        //this.bigBlind.socket.emit('update', this.getState())
+        //this.button.socket.emit('update', this.getState())
         this.nextStreet()
     }
 
     processCall = function() {
+        const hurryUp = (this.bet === 0)
         this.pot += 2 * this.bet
         this.bigBlind.stack -= this.bet 
         this.button.stack -= this.bet 
@@ -314,22 +319,35 @@ class Game {
         this.button.alreadyIn = 0
         this.bet = 0
         this.actionOn = this.bigBlind
+        
+        this.bigBlind.socket.emit('call', this.pot)
+        this.button.socket.emit('call', this.pot)
+
+        let delay = 2000
+        if (this.street === 'river') {
+            delay = 1000
+        }
+        if (hurryUp) {
+            delay = 500
+        }
         setTimeout( () => {
             if (this.noFurtherAction) {
                 this.runToShowdown()
             } else {
                 this.nextStreet()
             }    
-            this.bigBlind.socket.emit('update', this.getState())
-            this.button.socket.emit('update', this.getState())    
-        }, 1000)
+        }, delay)
     }
 
     runToShowdown = function() {
-        let delay = 0
+        this.button.socket.emit('deal', this.bigBlind.pocket[0], 'his-pocket-1')
+        this.button.socket.emit('deal', this.bigBlind.pocket[1], 'his-pocket-2')
+        this.bigBlind.socket.emit('deal', this.button.pocket[0], 'his-pocket-1')
+        this.bigBlind.socket.emit('deal', this.button.pocket[1], 'his-pocket-2')
+        let delay = 1000
         switch(this.street) {
             case 'preflop': 
-                delay += 1000
+                delay += 2000
                 setTimeout(() => {
                     this.street = 'flop' 
                     this.dealFlop()
@@ -337,7 +355,7 @@ class Game {
                     console.log('no action')    
                 }, delay)
             case 'flop': 
-                delay += 1000
+                delay += 2000
                 setTimeout( () => {
                     this.street = 'turn' 
                     this.dealTurn()
@@ -345,7 +363,7 @@ class Game {
                     console.log('no action')
                 }, delay)
             case 'turn': 
-                delay += 1000
+                delay += 2000
                 setTimeout( () => {
                     this.street = 'river'; 
                     this.dealRiver();
@@ -353,7 +371,7 @@ class Game {
                     console.log('no action')
                 }, delay)
             case 'river': 
-                delay += 1000
+                delay += 2000
                 setTimeout( () => {
                     this.street = 'done' 
                     this.showdown()
@@ -394,6 +412,7 @@ class Game {
         this.bigBlindUser.socket.emit('game over', 'somebody folded')
         this.buttonUser.socket.emit('game over', 'somebody folded')
         
+       
         setTimeout( () => {
             let someoneStanding = false
             if (this.bigBlindUser.status === 'standing') {
@@ -526,6 +545,9 @@ io.on('connection', (socket) => {
 
     socket.on('sit down', () => {
         user.status = 'sitting'
+        if (!user.opponent) {
+            return
+        }
         user.opponent.socket.emit('sit down')
         if ((!user.currentGame) && (user.opponent.status === 'sitting')){
             let game = null

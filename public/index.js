@@ -12,13 +12,7 @@ seeUsersButton.addEventListener('click', () => {
     socket.emit('see users')
 })
 
-const actionButton = document.createElement('button')
-actionButton.innerText = 'action'
-document.querySelector('body').append(actionButton)
-actionButton.addEventListener('click', () => {
-    const bet = parseInt(prompt('how much'))
-    socket.emit('action', bet)
-})
+
 
 const body = document.querySelector('body')
 const lobby_list = document.getElementById('lobby-list')
@@ -35,6 +29,7 @@ const auto_post = document.getElementById('auto-post')
 const auto_muck = document.getElementById('auto-muck')
 const my_pocket_1 = document.getElementById('my-pocket-1')
 const my_pocket_2 = document.getElementById('my-pocket-2')
+const his_pocket = document.getElementById('his-pocket')
 const his_pocket_1 = document.getElementById('his-pocket-1')
 const his_pocket_2 = document.getElementById('his-pocket-2')
 const board = document.getElementById('board')
@@ -44,8 +39,21 @@ const board_3 = document.getElementById('board-3')
 const board_4 = document.getElementById('board-4')
 const board_5 = document.getElementById('board-5')
 
+
+
+
 if (sessionStorage.getItem('username')) {
     login_button.innerText = sessionStorage.getItem('username')
+}
+if (sessionStorage.getItem('auto post') === 'true') {
+    auto_post.children[0].style.backgroundColor = 'aqua'
+} else {
+    sessionStorage.setItem('auto post', 'false')
+}
+if (sessionStorage.getItem('sit out') === 'true') {
+    sit_out.children[0].style.backgroundColor = 'aqua'
+} else {
+    sessionStorage.setItem('sit out', 'false')
 }
 
 const my = {
@@ -170,7 +178,6 @@ function displayPot() {
 function display() {
     displayMy()
     displayHis()
-    displayPot()
 }
 
 
@@ -213,22 +220,22 @@ action_bar.addEventListener('click', (event) => {
 auto_post.addEventListener('click', () => {
     if (sessionStorage.getItem('auto post') === 'false') {
         sessionStorage.setItem('auto post', 'true')
+        auto_post.children[0].style.backgroundColor = 'aqua'
     } else {
         sessionStorage.setItem('auto post', 'false')
+        auto_post.children[0].style.backgroundColor = 'white'
     }
 })
 
 sit_out.addEventListener('click', () => {
-    const text = sit_out.innerText
-    if (text === 'sit out') {
-        sit_out.innerText = 'rejoin'
+    if (sessionStorage.getItem('sit out') === 'false') {
+        sessionStorage.setItem('sit out', 'true')
+        sit_out.children[0].style.backgroundColor = 'aqua'
         socket.emit('stand up')
-        return
-    }
-    if (text === 'rejoin') {
-        sit_out.innerText = 'sit out'
+    } else {
+        sessionStorage.setItem('sit out', 'false')
+        sit_out.children[0].style.backgroundColor = 'white'
         socket.emit('sit down')
-        return
     }
 })
 
@@ -311,7 +318,6 @@ socket.on('challenge', challenger => {
 })
 
 socket.on('accepted', challengee => {
-    alert(challengee + ' has accepted your challenge.')
 })
 
 socket.on('declined', challengee => {
@@ -324,7 +330,9 @@ socket.on('new game', state => {
     const boardCards = Array.from(board.children)
     boardCards.forEach(x => x.style.display = 'none')
     his_pocket_1.setAttribute('src', 'blue.svg')
+    his_pocket_1.style.display = 'block'
     his_pocket_2.setAttribute('src', 'blue.svg')
+    his_pocket_2.style.display = 'block'
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
     }
@@ -348,16 +356,17 @@ socket.on('update', state => {
         dealerButton.setAttribute('class', 'my-button')
     }
     console.log('update')
+
     parseState(state)
     display()
 })
 
 socket.on('sit down', () => {
-    his_chip.innerText = 'ready'
+    his_name_plate.innerText = his.name + '\n' + his.stack
 })
 
 socket.on('stand up', () => {
-    his_name_plate.innerText = 'SITTING OUT'
+    his_name_plate.innerText = his.name + '\n' + 'sitting out'
 })
 
 socket.on('post small blind', () => {
@@ -438,6 +447,9 @@ socket.on('deal', (card, position) => {
 })
 
 socket.on('rebuy', (state) => {
+    while (action_bar.firstChild) {
+        action_bar.removeChild(action_bar.firstChild)
+    }
     const button = document.createElement('button')
     button.innerText = 'click to rebuy'
     button.setAttribute('class', 'action-button')
@@ -449,6 +461,7 @@ socket.on('rebuy', (state) => {
 })
 
 socket.on('game over', message => {
+    console.log('game over')
     sessionStorage.setItem('status', 'waiting')
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
@@ -456,7 +469,6 @@ socket.on('game over', message => {
     action_bar.innerText = message
     my_chip.style.display = 'none'
     his_chip.style.display = 'none'
-    pot_chip.style.display = 'none'
     
 })
 
@@ -474,4 +486,58 @@ socket.on('check', (whoChecked) => {
         my_chip.innerText = 'check'
         my_chip.style.display = 'block'
     }
+})
+
+socket.on('call', (newPotSize) => {
+    if (pot === newPotSize) {  //check check and check-chip doesn't need to be put in pot
+        return
+    }
+    my_chip.style.transition = 'transform 1s'
+    his_chip.style.transition = 'transform 1s'
+    my_chip.style.transform = `translateY(-105px)`
+    my_chip.style.transform += `translateX(185px)`
+    his_chip.style.transform = 'translateY(108px)'
+    his_chip.style.transform += 'translateX(185px)'
+    setTimeout( () => {
+        my_chip.style.transition = 'transform 0s'
+        his_chip.style.transition = 'transform 0s'
+        my_chip.style.transform = 'translate(0px, 0px)'
+        his_chip.style.transform = 'translate(0px, 0px)'
+        my_chip.style.display = 'none'
+        his_chip.style.display= 'none'
+        pot = newPotSize
+        displayPot()
+    }, 1000)
+})
+
+socket.on('you win', (finalPot) => {
+    console.log('you win')
+    pot_chip.style.display = 'block'
+    pot_chip.style.transition = 'transform 1s'
+    pot_chip.style.transform = 'translate(-185px, 105px)'
+    setTimeout( () => {
+        pot_chip.style.transition = 'transform 0s'
+        pot_chip.style.transform = 'translate(0px, 0px)'
+        pot_chip.style.display = 'none'
+    }, 1000)
+})
+
+socket.on('you lose', (finalPot) => {
+    pot_chip.style.display = 'block'
+    pot_chip.style.transition = 'transform 1s'
+    pot_chip.style.transform = 'translate(-185px, -108px)'
+    setTimeout( () => {
+        pot_chip.style.transition = 'transform 0s'
+        pot_chip.style.transform = 'translate(0px, 0px)'
+        pot_chip.style.display = 'none'
+    }, 1000)
+})
+
+
+const actionButton = document.createElement('button')
+actionButton.innerText = 'action'
+document.querySelector('body').append(actionButton)
+actionButton.addEventListener('click', () => {
+   
+    console.log('click')
 })
