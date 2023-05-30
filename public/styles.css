@@ -17,16 +17,21 @@ li:hover {
 }
 
 .message-box{
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    width: 300px;
+    width: 200px;
     height: 200px;
     position: fixed;
     left: 30%;
     top: 30%;
     background-color: yellow;
-    z-index: 10;
+    z-index: 100;
+    text-align: center;
 }
+
+
+
 
 #lobby{
     background-color:lavenderblush;

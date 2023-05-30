@@ -460,8 +460,9 @@ socket.on('rebuy', (state) => {
     })
 })
 
-socket.on('game over', message => {
+socket.on('game over', (message, state) => {
     console.log('game over')
+    parseState(state)
     sessionStorage.setItem('status', 'waiting')
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
@@ -488,10 +489,14 @@ socket.on('check', (whoChecked) => {
     }
 })
 
-socket.on('call', (newPotSize) => {
+socket.on('call', (newPotSize, newBetSize) => {
     if (pot === newPotSize) {  //check check and check-chip doesn't need to be put in pot
         return
     }
+    //if caller is all in for less ... don't make it look like the big stack is being ripped off
+    my.alreadyIn = newBetSize
+    his.alreadyIn = newBetSize
+    display()
     my_chip.style.transition = 'transform 1s'
     his_chip.style.transition = 'transform 1s'
     my_chip.style.transform = `translateY(-105px)`
@@ -519,6 +524,9 @@ socket.on('you win', (finalPot) => {
         pot_chip.style.transition = 'transform 0s'
         pot_chip.style.transform = 'translate(0px, 0px)'
         pot_chip.style.display = 'none'
+        console.log(my)
+        console.log(his)
+        display()
     }, 1000)
 })
 
@@ -530,6 +538,7 @@ socket.on('you lose', (finalPot) => {
         pot_chip.style.transition = 'transform 0s'
         pot_chip.style.transform = 'translate(0px, 0px)'
         pot_chip.style.display = 'none'
+        display()
     }, 1000)
 })
 

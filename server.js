@@ -220,8 +220,8 @@ class Game {
             }, 2000)
         }
         if (this.street === 'done') {
-            this.bigBlind.socket.emit('game over', this.wrapUpMessage)
-            this.button.socket.emit('game over', this.wrapUpMessage)
+            this.bigBlind.socket.emit('game over', this.wrapUpMessage, this.getState())
+            this.button.socket.emit('game over', this.wrapUpMessage, this.getState())
             this.buttonUser.currentGame = null
             this.bigBlindUser.currentGame = null
             setTimeout( () => {
@@ -311,6 +311,7 @@ class Game {
 
     processCall = function() {
         const hurryUp = (this.bet === 0)
+        const callAmount = this.bet
         this.pot += 2 * this.bet
         this.bigBlind.stack -= this.bet 
         this.button.stack -= this.bet 
@@ -320,8 +321,8 @@ class Game {
         this.bet = 0
         this.actionOn = this.bigBlind
         
-        this.bigBlind.socket.emit('call', this.pot)
-        this.button.socket.emit('call', this.pot)
+        this.bigBlind.socket.emit('call', this.pot, callAmount)
+        this.button.socket.emit('call', this.pot, callAmount)
 
         let delay = 2000
         if (this.street === 'river') {
