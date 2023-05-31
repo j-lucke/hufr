@@ -16,12 +16,15 @@ li:hover {
     cursor: pointer;
 }
 
+button:hover {
+    cursor: pointer;
+}
+
 .message-box{
     padding: 20px;
     display: flex;
     flex-direction: column;
     width: 200px;
-    height: 200px;
     position: fixed;
     left: 30%;
     top: 30%;
@@ -30,7 +33,17 @@ li:hover {
     text-align: center;
 }
 
+.message-box > button {
+    margin: 3px;
+}
 
+#quit-button {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px;
+    border-radius: 10px;
+}
 
 
 #lobby{

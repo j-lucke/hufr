@@ -17,6 +17,7 @@ seeUsersButton.addEventListener('click', () => {
 const body = document.querySelector('body')
 const lobby_list = document.getElementById('lobby-list')
 const login_button = document.getElementById('login-button')
+const quit_button = document.getElementById('quit-button')
 const action_bar = document.getElementById('action-bar')
 const his_name_plate = document.getElementById('his-name-plate')
 const my_name_plate = document.getElementById('my-name-plate')
@@ -74,8 +75,24 @@ if (sessionStorage.getItem('status') === 'playing') {
     socket.emit('recover')
 }
 
-let bet = 0
-let pot = 0
+let bet = undefined
+let pot = undefined
+
+function clearGamescreen() {
+    console.log('clear')
+    his_pocket_1.style.display = 'none'
+    his_pocket_2.style.display = 'none'
+    my_pocket_1.style.display = 'none'
+    my_pocket_2.style.display = 'none'
+    his_name_plate.style.display = 'none'
+    my_name_plate.style.display = 'none'
+    my_chip.style.display = 'none'
+    his_chip.style.display = 'none'
+    pot_chip.style.display = 'none'
+    while (action_bar.firstChild) {
+        action_bar.removeChild(action_bar.firstChild)
+    }
+}
 
 function getCustomBet(event) {
     let isValid = true
@@ -163,6 +180,25 @@ function display() {
     displayHis()
 }
 
+function messageBox(text, ...options) {
+    const box = document.createElement('div')
+    box.setAttribute('class', 'message-box')
+    box.innerText = text
+    count = 0
+    options.forEach(x => {
+        const button = document.createElement('button')
+        button.innerText = options[count++]
+        box.appendChild(button)
+    })
+    return box
+}
+
+function startMatch() {
+    his_name_plate.style.display = 'flex'
+    my_name_plate.style.display = 'flex'
+    displayMy()
+    displayHis()
+}
 
 
 
@@ -179,6 +215,25 @@ login_button.addEventListener('click', () => {
         socket.emit('logout')
         login_button.innerText= 'login'
     }
+})
+
+quit_button.addEventListener('click', ()=> {
+    quit_button.disabled = true
+    const box = messageBox('Really? Quit the match??', 'yes', 'no')
+    gamescreen.appendChild(box)
+    box.addEventListener('click', (event) => {
+        if (event.target === box.children[0]) {
+            box.remove()
+            quit_button.disabled = false
+            socket.emit('quit')
+            sessionStorage.setItem('status', 'in lobby')
+            clearGamescreen()
+        }
+        if (event.target === box.children[1]) {
+            box.remove()
+            quit_button.disabled = false
+        }
+    })
 })
 
 lobby_list.addEventListener('click', (event) => {
@@ -225,16 +280,12 @@ sit_out.addEventListener('click', () => {
 
 
 socket.on('message', message => {
-    const div = document.createElement('div')
-    div.setAttribute('class', 'message-box')
-    div.innerText = message
-    const button = document.createElement('button')
-    button.innerText = 'OK'
-    div.appendChild(button)
-    body.appendChild(div)
-
-    button.addEventListener('click', () => {
-        div.remove()
+    const box = messageBox(message, 'OK')
+    gamescreen.appendChild(box)
+    box.addEventListener('click', (event) => {
+        if (event.target === box.children[0]) {
+            div.remove()
+        }
     })
 })
 
@@ -304,8 +355,30 @@ socket.on('accepted', challengee => {
 })
 
 socket.on('declined', challengee => {
-    alert(challengee + ' has declined your challenge.')
+    const box = messageBox(challengee + ' has declined your challenge.', 'OK')
+    gamescreen.appendChild(box)
+    box.addEventListener('click', (event) => {
+        if (event.target === box.children[0]) {
+            box.remove()
+        }
+    })
+})
 
+socket.on('quit', () => {
+    const box = messageBox(his.name + ' has quit the match.', 'OK')
+    gamescreen.appendChild(box)
+    box.addEventListener('click', (event) => {
+        if (event.target === box.children[0]) {
+            box.remove()
+        }
+    })
+
+    sessionStorage.setItem('status', 'in lobby')
+    clearGamescreen()
+})
+
+socket.on('new match', () => {
+    startMatch()
 })
 
 socket.on('new game', state => {    

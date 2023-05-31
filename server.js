@@ -41,6 +41,14 @@ class User {
         this.currentGame = null
         this.stack = 1000
         this.isNextButton = undefined
+        this.status = undefined
+    }
+
+    postMatchCleanUp = function() {
+        this.opponent = null
+        this.currentGame = null
+        this.isNextButton = undefined
+        this.status = 'in lobby'
     }
 }
 
@@ -599,13 +607,15 @@ io.on('connection', (socket) => {
         if (otherDude) {
             otherDude.socket.emit('accepted', user.username)
             setTimeout( () => {
+                user.socket.emit('new match')
+                otherDude.socket.emit('new match')
                 user.status = 'sitting'
                 user.opponent = otherDude
                 otherDude.status = 'sitting'
                 otherDude.opponent = user
                 game = new Game(user, otherDude)
                 startNewGame(game)
-            }, 3000)
+            }, 1000)
         }
     })
 
@@ -614,6 +624,12 @@ io.on('connection', (socket) => {
         if (otherDude) {
             otherDude.socket.emit('declined', user.username)
         }
+    })
+
+    socket.on('quit', () => {
+        user.opponent.socket.emit('quit')
+        user.opponent.postMatchCleanUp()
+        user.postMatchCleanUp()        
     })
 
     socket.on('rebuy', () => {
