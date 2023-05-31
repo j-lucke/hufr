@@ -281,10 +281,10 @@ class Game {
             this.loser = this.bigBlind
         }
     
-        this.button.socket.emit('deal', this.bigBlind.pocket[0], 'his-pocket-1')
-        this.button.socket.emit('deal', this.bigBlind.pocket[1], 'his-pocket-2')
-        this.bigBlind.socket.emit('deal', this.button.pocket[0], 'his-pocket-1')
-        this.bigBlind.socket.emit('deal', this.button.pocket[1], 'his-pocket-2')
+        this.button.socket.emit('deal', [{card: this.bigBlind.pocket[0], position: 'his-pocket-1'}])
+        this.button.socket.emit('deal', [{card: this.bigBlind.pocket[1], position: 'his-pocket-2'}])
+        this.bigBlind.socket.emit('deal', [{card: this.button.pocket[0], position: 'his-pocket-1'}])
+        this.bigBlind.socket.emit('deal', [{card: this.button.pocket[1], position: 'his-pocket-2'}])
 
         if (result !== 'chop') {
             this.winner.stack += this.pot
@@ -341,10 +341,11 @@ class Game {
     }
 
     runToShowdown = function() {
-        this.button.socket.emit('deal', this.bigBlind.pocket[0], 'his-pocket-1')
-        this.button.socket.emit('deal', this.bigBlind.pocket[1], 'his-pocket-2')
-        this.bigBlind.socket.emit('deal', this.button.pocket[0], 'his-pocket-1')
-        this.bigBlind.socket.emit('deal', this.button.pocket[1], 'his-pocket-2')
+        this.button.socket.emit('deal', [{card: this.bigBlind.pocket[0], position: 'his-pocket-1'}])
+        this.button.socket.emit('deal', [{card: this.bigBlind.pocket[1], position: 'his-pocket-2'}])
+        this.bigBlind.socket.emit('deal', [{card: this.button.pocket[0], position: 'his-pocket-1'}])
+        this.bigBlind.socket.emit('deal', [{card: this.button.pocket[1], position: 'his-pocket-2'}])
+
         let delay = 1000
         switch(this.street) {
             case 'preflop': 
@@ -438,38 +439,38 @@ class Game {
         this.button.pocket.push(deal(this.deck))
         this.bigBlind.pocket.push(deal(this.deck))
         this.bigBlind.pocket.push(deal(this.deck))
-
-        this.button.socket.emit('deal', this.button.pocket[0], 'my-pocket-1')
-        this.button.socket.emit('deal', this.button.pocket[1], 'my-pocket-2')
-        this.bigBlind.socket.emit('deal', this.bigBlind.pocket[0], 'my-pocket-1')
-        this.bigBlind.socket.emit('deal', this.bigBlind.pocket[1], 'my-pocket-2')
+        let button = []
+        button.push({card: this.button.pocket[0], position: 'my-pocket-1'})
+        button.push({card: this.button.pocket[1], position: 'my-pocket-2'})
+        let bigBlind = []
+        bigBlind.push({card: this.bigBlind.pocket[0], position: 'my-pocket-1'})
+        bigBlind.push({card: this.bigBlind.pocket[1], position: 'my-pocket-2'})
+        this.bigBlind.socket.emit('deal', bigBlind)
+        this.button.socket.emit('deal', button)
     }
 
     dealFlop = function() {
         this.board.push(deal(this.deck))
         this.board.push(deal(this.deck))
         this.board.push(deal(this.deck))
-
-        this.button.socket.emit('deal', this.board[0], 'board-1')
-        this.bigBlind.socket.emit('deal', this.board[0], 'board-1')
-        this.button.socket.emit('deal', this.board[1], 'board-2')
-        this.bigBlind.socket.emit('deal', this.board[1], 'board-2')
-        this.button.socket.emit('deal', this.board[2], 'board-3')
-        this.bigBlind.socket.emit('deal', this.board[2], 'board-3')
-
+        let flop = []
+        flop.push({card: this.board[0], position: 'board-1'})
+        flop.push({card: this.board[1], position: 'board-2'})
+        flop.push({card: this.board[2], position: 'board-3'})
+        this.bigBlind.socket.emit('deal', flop)
+        this.button.socket.emit('deal', flop)
     }
 
     dealTurn = function() {
         this.board.push(deal(this.deck))
-        this.bigBlind.socket.emit('deal', this.board[3], 'board-4')
-        this.button.socket.emit('deal', this.board[3], 'board-4')
+        this.bigBlind.socket.emit('deal', [{card: this.board[3], position: 'board-4'}])
+        this.button.socket.emit('deal', [{card: this.board[3], position: 'board-4'}])
     }
 
     dealRiver = function() {
         this.board.push(deal(this.deck))
-        this.bigBlind.socket.emit('deal', this.board[4], 'board-5')
-        this.button.socket.emit('deal', this.board[4], 'board-5')
-
+        this.bigBlind.socket.emit('deal', [{card: this.board[4], position: 'board-5'}])
+        this.button.socket.emit('deal', [{card: this.board[4], position: 'board-5'}])
     }
 }
 
@@ -645,20 +646,27 @@ io.on('connection', (socket) => {
 
         if (game.bigBlind.username === user.username) {
             game.bigBlind.socket = socket
-            socket.emit('deal', game.bigBlind.pocket[0], 'my-pocket-1')
-            socket.emit('deal', game.bigBlind.pocket[1], 'my-pocket-2')
+            const pocket = [
+                {card: game.bigBlind.pocket[0], position: 'my-pocket-1'},
+                {card: game.bigBlind.pocket[1], position: 'my-pocket-2'}
+            ]
+            socket.emit('deal', pocket)
         } else {
             game.button.socket = socket
-            socket.emit('deal', game.button.pocket[0], 'my-pocket-1')
-            socket.emit('deal', game.button.pocket[1], 'my-pocket-2')
-
+            const pocket = [
+                {card: game.button.pocket[0], position: 'my-pocket-1'},
+                {card: game.button.pocket[1], position: 'my-pocket-2'}
+            ]
+            socket.emit('deal', pocket)
         }
         socket.emit('update', game.getState())
         let count = 1
-        game.board.forEach(card => {
-            socket.emit('deal', card, 'board-' + count)
+        const board = []
+        game.board.forEach(x => {
+            board.push({card: x, position: 'board-' + count})
             count++
         })
+        socket.emit('deal', board)
         if (game.actionOn.username === user.username) {
             console.log(game.getOptions())
             socket.emit('action', game.getOptions())

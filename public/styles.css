@@ -87,6 +87,7 @@ li:hover {
 
 .board-card {
     height: 80px;
+    display: none;
 }
 
 .chip {
@@ -123,6 +124,7 @@ li:hover {
 
 .his-pocket-card {
     height: 70px;
+    display: none;
 }
 
 #his-pocket {
@@ -136,6 +138,7 @@ li:hover {
 
 .my-pocket-card {
     height: 140px;
+    display: none;
 }
 
 #my-pocket {

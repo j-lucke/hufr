@@ -136,26 +136,6 @@ function displayMy() {
     }
 }
 
-function parseState(state) {
-    if (sessionStorage.getItem('myPosition') === 'big blind') {
-        my.name = state.bigBlind
-        my.stack = state.bigBlindStack
-        my.alreadyIn = state.bigBlindAlreadyIn
-        his.name = state.button
-        his.stack = state.buttonStack
-        his.alreadyIn = state.buttonAlreadyIn
-    } else {
-        his.name = state.bigBlind
-        his.stack = state.bigBlindStack
-        his.alreadyIn = state.bigBlindAlreadyIn
-        my.name = state.button
-        my.stack = state.buttonStack
-        my.alreadyIn = state.buttonAlreadyIn
-    }
-    bet = state.bet
-    pot = state.pot
-}
-
 function displayHis() {
     if (parseInt(his.alreadyIn) > 0) {
         his_chip.innerText = his.alreadyIn
@@ -164,6 +144,9 @@ function displayHis() {
     } else {
         his_name_plate.innerText = his.name + '\n' + his.stack
     }
+    //to recover his cards after reconnection
+    his_pocket_1.style.display = 'block'
+    his_pocket_2.style.display = 'block'
 }
 
 function displayPot() {
@@ -434,16 +417,22 @@ function translate(card) {
 
 }
 
-socket.on('deal', (card, position) => {
+socket.on('deal', cards => {
+    //why not just set display to none straight away?
+    //because of the blinds!
     if (his.alreadyIn === 0) {
         his_chip.style.display = 'none'
     }
     if (my.alreadyIn === 0) {
         my_chip.style.display = 'none'
     }
-    const img = document.getElementById(position)
-    img.setAttribute('src', translate(card))
-    img.style.display = 'block'
+    console.log(cards)
+    cards.forEach( x => {
+        console.log(x)
+        const img = document.getElementById(x.position)
+        img.setAttribute('src', translate(x.card))
+        img.style.display = 'block'
+    })
 })
 
 socket.on('rebuy', (state) => {
