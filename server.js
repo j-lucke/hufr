@@ -41,7 +41,7 @@ class User {
         this.currentGame = null
         this.stack = 1000
         this.isNextButton = undefined
-        this.status = undefined
+        this.status = 'in lobby'
     }
 
     postMatchCleanUp = function() {
@@ -419,8 +419,8 @@ class Game {
         this.bigBlindUser.currentGame = null
         this.buttonUser.currentGame = null
 
-        this.bigBlindUser.socket.emit('game over', 'somebody folded')
-        this.buttonUser.socket.emit('game over', 'somebody folded')
+        this.bigBlindUser.socket.emit('game over', 'somebody folded', this.getState())
+        this.buttonUser.socket.emit('game over', 'somebody folded', this.getState())
         
        
         setTimeout( () => {
@@ -485,11 +485,15 @@ class Game {
 const users = []
 
 function getPlayers() {
-// filters out users who are not logged in.  returns array of usernames
+// filters out users who are not logged in. 
     const players = []
     users.forEach(x => {
         if (x.username) {
-            players.push(x.username)
+            players.push({
+                name: x.username,
+                stack: x.stack,
+                status: x.status
+            })
         }
     })
     return players
@@ -550,7 +554,7 @@ io.on('connection', (socket) => {
     socket.on('login', username => {
         user.username = username
         user.status = 'in lobby'
-        io.emit('login', username)
+        io.emit('login', {name: username, stack: user.stack, status: 'in lobby'})
     })
 
     socket.on('sit down', () => {
@@ -594,8 +598,12 @@ io.on('connection', (socket) => {
     })
 
     socket.on('challenge', challengee => {
-        const opponent = users.find(x => x.username == challengee)
-        if (opponent.status != 'playing') {
+        if (user.opponent) {
+            socket.emit('message', 'to make a challenge you must quit this match')
+            return
+        }
+        const opponent = users.find(x => x.username === challengee)
+        if (opponent.status === 'in lobby') {
             opponent.socket.emit('challenge', user.username)
         } else {
             socket.emit('message', challengee + ' is busy defending his roll against someone else!')
@@ -607,8 +615,10 @@ io.on('connection', (socket) => {
         if (otherDude) {
             otherDude.socket.emit('accepted', user.username)
             setTimeout( () => {
-                user.socket.emit('new match')
-                otherDude.socket.emit('new match')
+                const userData = {name: user.username, stack: user.stack}
+                const dudeData = {name: otherDude.username, stack: otherDude.stack}
+                user.socket.emit('new match', userData, dudeData)
+                otherDude.socket.emit('new match', dudeData, userData)
                 user.status = 'sitting'
                 user.opponent = otherDude
                 otherDude.status = 'sitting'

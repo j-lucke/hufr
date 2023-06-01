@@ -19,6 +19,7 @@ const lobby_list = document.getElementById('lobby-list')
 const login_button = document.getElementById('login-button')
 const quit_button = document.getElementById('quit-button')
 const action_bar = document.getElementById('action-bar')
+const options_bar = document.getElementById('options-bar')
 const his_name_plate = document.getElementById('his-name-plate')
 const my_name_plate = document.getElementById('my-name-plate')
 const my_chip = document.getElementById('my-chip')
@@ -42,9 +43,11 @@ const board_5 = document.getElementById('board-5')
 
 
 
-
+let loggedIn = false
 if (sessionStorage.getItem('username')) {
     login_button.innerText = sessionStorage.getItem('username')
+    loggedIn = true
+    socket.emit('recover')
 }
 if (sessionStorage.getItem('auto post') === 'true') {
     auto_post.children[0].style.backgroundColor = 'aqua'
@@ -71,28 +74,9 @@ const his = {
     status: undefined
 }
 
-if (sessionStorage.getItem('status') === 'playing') {
-    socket.emit('recover')
-}
-
 let bet = undefined
 let pot = undefined
 
-function clearGamescreen() {
-    console.log('clear')
-    his_pocket_1.style.display = 'none'
-    his_pocket_2.style.display = 'none'
-    my_pocket_1.style.display = 'none'
-    my_pocket_2.style.display = 'none'
-    his_name_plate.style.display = 'none'
-    my_name_plate.style.display = 'none'
-    my_chip.style.display = 'none'
-    his_chip.style.display = 'none'
-    pot_chip.style.display = 'none'
-    while (action_bar.firstChild) {
-        action_bar.removeChild(action_bar.firstChild)
-    }
-}
 
 function getCustomBet(event) {
     let isValid = true
@@ -124,6 +108,7 @@ function customBetButton() {
 }
 
 function parseState(state) {
+    console.log(state)
     if (sessionStorage.getItem('myPosition') === 'big blind') {
         my.name = state.bigBlind
         my.stack = state.bigBlindStack
@@ -162,8 +147,6 @@ function displayHis() {
         his_name_plate.innerText = his.name + '\n' + his.stack
     }
     //to recover his cards after reconnection
-    his_pocket_1.style.display = 'block'
-    his_pocket_2.style.display = 'block'
 }
 
 function displayPot() {
@@ -193,9 +176,34 @@ function messageBox(text, ...options) {
     return box
 }
 
-function startMatch() {
+function clearGamescreen() {
+    console.log('clear')
+    options_bar.style.display = 'none'
+    his_pocket_1.style.display = 'none'
+    his_pocket_2.style.display = 'none'
+    my_pocket_1.style.display = 'none'
+    my_pocket_2.style.display = 'none'
+    his_name_plate.style.display = 'none'
+    my_name_plate.style.display = 'none'
+    my_chip.style.display = 'none'
+    his_chip.style.display = 'none'
+    pot_chip.style.display = 'none'
+    quit_button.style.display = 'none'
+    while (action_bar.firstChild) {
+        action_bar.removeChild(action_bar.firstChild)
+    }
+}
+
+
+function startMatch(me, him) {
+    options_bar.style.display = 'flex'
     his_name_plate.style.display = 'flex'
     my_name_plate.style.display = 'flex'
+    quit_button.style.display = 'block'
+    his.name = him.name
+    his.stack = him.stack
+    my.name = me.name
+    my.stack = me.stack
     displayMy()
     displayHis()
 }
@@ -207,12 +215,14 @@ login_button.addEventListener('click', () => {
         const username = prompt('choose a screen name')
         if (username) {
             socket.emit('login', username)
+            loggedIn = true
             sessionStorage.setItem('username', username)
         }
         login_button.innerText = username
     } else {
         sessionStorage.removeItem('username')
         socket.emit('logout')
+        loggedIn = false
         login_button.innerText= 'login'
     }
 })
@@ -237,9 +247,20 @@ quit_button.addEventListener('click', ()=> {
 })
 
 lobby_list.addEventListener('click', (event) => {
+    if (!loggedIn) {
+        const box = messageBox('you must be logged in to issue a challenge', 'OK')
+        gamescreen.appendChild(box)
+        box.addEventListener('click', (event) => {
+            if (event.target === box.children[0]) {
+                box.remove()
+            }
+        })
+        return
+    }
     const children = Array.from(lobby_list.children)
     if (children.includes(event.target)) {
-        socket.emit('challenge', event.target.innerText)
+        const challengee = event.target.innerText.split(' ')[0]
+        socket.emit('challenge', challengee)
     }
 
 })
@@ -277,14 +298,12 @@ sit_out.addEventListener('click', () => {
     }
 })
 
-
-
 socket.on('message', message => {
     const box = messageBox(message, 'OK')
     gamescreen.appendChild(box)
     box.addEventListener('click', (event) => {
         if (event.target === box.children[0]) {
-            div.remove()
+            box.remove()
         }
     })
 })
@@ -298,23 +317,29 @@ socket.on('players', players => {
         lobby_list.removeChild(lobby_list.firstChild)
     }
     players.forEach( x => {
-        if (x == sessionStorage.getItem('username')) {
-            return
+        if (x.name !== sessionStorage.getItem('username')) {
+            const li = document.createElement('li')
+            li.setAttribute('id', x.name)
+            li.innerText = `${x.name} . . . . .       ${x.status}`
+            if (x.status === 'in lobby') {
+                li.innerText += ` [${x.stack}]`
+            }
+            lobby_list.appendChild(li)
         }
-        const li = document.createElement('li')
-        li.setAttribute('id', x)
-        li.innerText = x
-        lobby_list.appendChild(li)
     })
 })
 
-socket.on('login', username => {
-    if (username == sessionStorage.getItem('username')) {
+socket.on('login', (user) => {
+    if (user.name == sessionStorage.getItem('username')) {
         return
     }
     const li = document.createElement('li')
-    li.setAttribute('id', username)
-    li.innerText = username
+    li.setAttribute('id', user.name)
+    li.innerText = `${user.name} . . . . .     ${user.status}`
+    if (user.status === 'in lobby') {
+        li.innerText += ` [${user.stack}]`
+    }
+
     lobby_list.appendChild(li)
 })
 
@@ -377,18 +402,21 @@ socket.on('quit', () => {
     clearGamescreen()
 })
 
-socket.on('new match', () => {
-    startMatch()
+socket.on('new match', (me, him) => {
+    startMatch(me, him)
 })
 
 socket.on('new game', state => {    
+    console.log('new game')
     sessionStorage.setItem('status', 'playing')
+    my_pocket_1.style.display = 'none'
+    my_pocket_2.style.display = 'none'
+    his_pocket_1.style.display = 'none'
+    his_pocket_2.style.display = 'none'
     const boardCards = Array.from(board.children)
     boardCards.forEach(x => x.style.display = 'none')
     his_pocket_1.setAttribute('src', 'blue.svg')
-    his_pocket_1.style.display = 'block'
     his_pocket_2.setAttribute('src', 'blue.svg')
-    his_pocket_2.style.display = 'block'
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
     }
@@ -399,11 +427,13 @@ socket.on('new game', state => {
         sessionStorage.setItem('myPosition', 'button')
         dealerButton.setAttribute('class', 'my-button')
     }
-    parseState()
-    display()
+    parseState(state)
+    //display()
 })
 
 socket.on('update', state => {
+    console.log('update')
+
     if (sessionStorage.getItem('username') === state.bigBlind) {
         sessionStorage.setItem('myPosition', 'big blind')
         dealerButton.setAttribute('class', 'his-button')
@@ -411,7 +441,10 @@ socket.on('update', state => {
         sessionStorage.setItem('myPosition', 'button')
         dealerButton.setAttribute('class', 'my-button')
     }
-    console.log('update')
+
+    // for recovery
+    his_name_plate.style.display = 'flex'
+    my_name_plate.style.display = 'flex'
 
     parseState(state)
     display()
@@ -499,7 +532,10 @@ socket.on('deal', cards => {
     if (my.alreadyIn === 0) {
         my_chip.style.display = 'none'
     }
-    console.log(cards)
+    if (cards[0].position.includes('my')) {
+        his_pocket_1.style.display = 'block'
+        his_pocket_2.style.display = 'block'
+    }
     cards.forEach( x => {
         console.log(x)
         const img = document.getElementById(x.position)
@@ -532,11 +568,10 @@ socket.on('game over', (message, state) => {
     action_bar.innerText = message
     my_chip.style.display = 'none'
     his_chip.style.display = 'none'
-    
+    console.log(my_chip.style.display)
 })
 
 socket.on('fold', () => {
-    his_chip.style.backgroundColor = 'white'
     his_chip.innerText = 'fold'
     console.log('fold')
 })
@@ -552,6 +587,7 @@ socket.on('check', (whoChecked) => {
 })
 
 socket.on('call', (newPotSize, newBetSize) => {
+    console.log('call')
     if (pot === newPotSize) {  //check check and check-chip doesn't need to be put in pot
         return
     }
@@ -593,6 +629,7 @@ socket.on('you win', (finalPot) => {
 })
 
 socket.on('you lose', (finalPot) => {
+    console.log('you lose')
     pot_chip.style.display = 'block'
     pot_chip.style.transition = 'transform 1s'
     pot_chip.style.transform = 'translate(-185px, -108px)'
@@ -604,11 +641,3 @@ socket.on('you lose', (finalPot) => {
     }, 1000)
 })
 
-
-const actionButton = document.createElement('button')
-actionButton.innerText = 'action'
-document.querySelector('body').append(actionButton)
-actionButton.addEventListener('click', () => {
-   
-    console.log('click')
-})
