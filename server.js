@@ -191,6 +191,11 @@ class Game {
             bet: this.bet,
             board: this.board
         }
+        if (this.previousBet) {
+            state.facing = this.bet - this.previousBet
+        } else {
+            state.facing = this.bet
+        }
         return state
     }
 
@@ -588,6 +593,10 @@ io.on('connection', (socket) => {
         setTimeout( () => {
             if (user.connectionStatus == 'connected') {
             } else {
+                if (user.opponent) {
+                    user.opponent.socket.emit('quit')
+                    user.opponent.postMatchCleanUp()
+                }
                 const index = users.indexOf(user)
                 users.splice(index, 1)
                 if (user.username) {
@@ -615,8 +624,10 @@ io.on('connection', (socket) => {
         if (otherDude) {
             otherDude.socket.emit('accepted', user.username)
             setTimeout( () => {
-                const userData = {name: user.username, stack: user.stack}
-                const dudeData = {name: otherDude.username, stack: otherDude.stack}
+                const userData = {name: user.username, stack: user.stack, status: 'sitting'}
+                const dudeData = {name: otherDude.username, stack: otherDude.stack, status: 'sitting'}
+                io.emit('lobby update', userData)
+                io.emit('lobby update', dudeData)
                 user.socket.emit('new match', userData, dudeData)
                 otherDude.socket.emit('new match', dudeData, userData)
                 user.status = 'sitting'
@@ -638,6 +649,8 @@ io.on('connection', (socket) => {
 
     socket.on('quit', () => {
         user.opponent.socket.emit('quit')
+        io.emit('lobby update', {name: user.username, stack: user.stack, status: 'in lobby'})
+        io.emit('lobby update', {name: user.opponent.username, stack: user.opponent.stack, status: 'in lobby'})
         user.opponent.postMatchCleanUp()
         user.postMatchCleanUp()        
     })

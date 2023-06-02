@@ -60,6 +60,8 @@ if (sessionStorage.getItem('sit out') === 'true') {
     sessionStorage.setItem('sit out', 'false')
 }
 
+const gameState = null
+
 const my = {
     name: sessionStorage.getItem('username'),
     stack: undefined,
@@ -75,6 +77,7 @@ const his = {
 }
 
 let bet = undefined
+let facing = undefined
 let pot = undefined
 
 
@@ -85,7 +88,19 @@ function getCustomBet(event) {
         if (isNaN(customBet)) {
             return
         }
-        
+        console.log(facing)
+        if (!facing && customBet < 40) {
+        // facing big blind
+            return
+        }
+        if (customBet < 2*facing) {
+            console.log('too small')
+            return
+        }
+        if (customBet - my.alreadyIn > my.stack) {
+            console.log('too big')
+            return
+        }
         socket.emit('action', customBet)
         while (action_bar.firstChild) {
             action_bar.removeChild(action_bar.firstChild)
@@ -126,6 +141,7 @@ function parseState(state) {
     }
     pot = state.pot
     bet = state.bet
+    facing = state.facing
 }
 
 function displayMy() {
@@ -350,6 +366,15 @@ socket.on('logout', username => {
     }
 })
 
+socket.on('lobby update', player => {
+    const li = document.getElementById(player.name)
+    let str = `${player.name} . . . . .       ${player.status}`
+    if (player.status === 'in lobby') {
+        str += ` [${player.stack}]`
+    }
+    li.innerText = str
+})
+
 socket.on('challenge', challenger => {
     console.log('challenge!!!')
     const div = document.createElement('div')
@@ -445,6 +470,7 @@ socket.on('update', state => {
     // for recovery
     his_name_plate.style.display = 'flex'
     my_name_plate.style.display = 'flex'
+    quit_button.style.display = 'block'
 
     parseState(state)
     display()
