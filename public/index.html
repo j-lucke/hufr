@@ -8,8 +8,11 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <button id="login-button">login</button>
+    <div id="main-container">
+    <div id="main">
     <div id="lobby">
+        <button id="login-button">login</button>
+
         <h4>click a name to send a challenge!</h4>
         <ul id="lobby-list"></ul>
     </div>
@@ -53,6 +56,8 @@
                 <div class="check-box"></div>
             </button>
         </div>
+    </div>
+    </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

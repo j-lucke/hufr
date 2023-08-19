@@ -5,13 +5,14 @@ socket.auth = {
 }
 socket.connect()
 
+/*
 const seeUsersButton = document.createElement('button')
 seeUsersButton.innerText = 'see users'
 document.querySelector('body').prepend(seeUsersButton)
 seeUsersButton.addEventListener('click', () => {
     socket.emit('see users')
 })
-
+*/
 
 
 const body = document.querySelector('body')
@@ -288,8 +289,8 @@ action_bar.addEventListener('click', (event) => {
         while (action_bar.firstChild) {
             action_bar.removeChild(action_bar.firstChild)
         }
+        action_bar.style.display = 'none' 
     }
-
 })
 
 auto_post.addEventListener('click', () => {
@@ -523,6 +524,7 @@ socket.on('action', options => {
         action_bar.appendChild(button)
     })
     action_bar.appendChild(customBetButton())
+    action_bar.style.display = 'flex'
 })
 
 function translate(card) {
@@ -578,6 +580,7 @@ socket.on('rebuy', (state) => {
     button.innerText = 'click to rebuy'
     button.setAttribute('class', 'action-button')
     action_bar.appendChild(button)
+    action_bar.style.display = 'flex'
     button.addEventListener('click', function tempListener() {
         socket.emit('rebuy', state)
         button.remove()
@@ -591,7 +594,12 @@ socket.on('game over', (message, state) => {
     while (action_bar.firstChild) {
         action_bar.removeChild(action_bar.firstChild)
     }
-    action_bar.innerText = message
+    const container = document.createElement('button')
+    container.setAttribute('class', 'action-button')
+    container.innerText = message
+    container.style.width = '300px'
+    action_bar.appendChild(container)
+    action_bar.style.display = 'flex'
     my_chip.style.display = 'none'
     his_chip.style.display = 'none'
     console.log(my_chip.style.display)

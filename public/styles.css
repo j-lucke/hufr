@@ -2,13 +2,17 @@ h1 {
     color: blue;
 }
 
+body {
+    margin: 0;
+    background-color: black;
+}
+
 h4 {
    text-align: center;
 }
 
 div {
-    border: 1px solid black;
-    border-radius: 10px;
+    border-radius: 5px;
     margin: 10px;
 }
 
@@ -19,6 +23,7 @@ li:hover {
 button:hover {
     cursor: pointer;
 }
+
 
 .message-box{
     padding: 20px;
@@ -37,6 +42,45 @@ button:hover {
     margin: 3px;
 }
 
+#header {
+    display: flex;
+    flex-direction: column;
+    height: 50px;
+    background-color:white;
+    margin: 0;
+    border-radius: 0;
+}
+
+#title {
+    color: black;
+    font-size: 40px;
+    font-family: 'Courier New', Courier, monospace;
+    align-self: center;
+    margin: 0;
+}
+
+#login-button {
+    background-color: white;
+    border: 1px solid gray;
+    font-size: 20px;
+    align-self: center;
+    margin: 10px;
+    border-radius: 15px;
+    width: 100px;
+}
+
+#main-container {
+    display: flex;
+    flex-basis: 850px;
+}
+
+#main {
+    position: static;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap-reverse;
+}
+
 #quit-button {
     position: absolute;
     display: none;
@@ -44,30 +88,33 @@ button:hover {
     left: 20px;
     padding: 10px;
     border-radius: 10px;
+    border: solid black 1px;
 }
 
-
 #lobby{
-    background-color:lavenderblush;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid white;
+    color: white;
     width: 300px;
-    height: 300px;
 }
 
 #gamescreen {
     position: relative;
-    background-color: lavenderblush;
+    background-color: black;
     width: 800px;
     height: 500px;
 }
 
 #his-name-plate {
-    position: absolute;
+    position: relative;
     display: none;
     flex-direction: column;
     width: 100px;
     left: 220px;
     top: 5px;
     text-align: center;
+    color: white;
 }
 
 #my-name-plate {
@@ -78,6 +125,7 @@ button:hover {
     left: 100px;
     bottom: 80px;
     text-align: center;
+    color: white;
 }
 
 
@@ -89,6 +137,7 @@ button:hover {
     height: 300px;
     border-radius: 50%;
     background-color: green;
+    border: solid black 1px;
 }
 
 #board {
@@ -113,6 +162,7 @@ button:hover {
     text-align: center;
     line-height: 50px;
     transition: transform 1s;
+    border: solid black 1px;
 }
 
 #my-chip {
@@ -153,6 +203,8 @@ button:hover {
 .my-pocket-card {
     height: 140px;
     display: none;
+    border: solid black 1px;
+    border-radius: 5px;
 }
 
 #my-pocket {
@@ -173,7 +225,8 @@ button:hover {
     right: 0;
     bottom: 0;
     height: 60px;
-    background-color: gold;
+    margin: 8px 0;
+    border-radius: 0px;
 }
 
 .action-button {
@@ -183,15 +236,14 @@ button:hover {
 
 #options-bar {
     position: absolute;
-    display: none;
+    display: flex;
     flex-direction: column;
     flex-wrap: wrap;
     left: 10px;
-    bottom: 1px;
+    bottom: -2px;
     height: 60px;
     width: 100px;
     border: none;
-
 }
 
 .options-button {
@@ -218,9 +270,10 @@ button:hover {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: yellow;
+    background-color: white;
     text-align: center;
     line-height: 20px;
+    border: solid black 1px;
 }
 
 .my-button {
@@ -230,9 +283,10 @@ button:hover {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background-color: yellow;
+    background-color: white;
     text-align: center;
     line-height: 20px;
+    border: solid black 1px;
 }
 
 .check-box {
