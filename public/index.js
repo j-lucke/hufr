@@ -344,6 +344,9 @@ socket.on('players', players => {
             lobby_list.appendChild(li)
         }
     })
+    if (lobby_list.childElementCount != 0) {
+        lobby_message.innerText = 'click on a name to send a challenge.'
+    }
 })
 
 socket.on('login', (user) => {
@@ -356,14 +359,19 @@ socket.on('login', (user) => {
     if (user.status === 'in lobby') {
         li.innerText += ` [${user.stack}]`
     }
-
     lobby_list.appendChild(li)
+    if (lobby_list.childElementCount != 0) {
+        lobby_message.innerText = 'click on a name to send a challenge.'
+    }
 })
 
 socket.on('logout', username => {
     const li = document.getElementById(username)
     if (li) {
         li.remove()
+    }
+    if (lobby_list.childElementCount == 0) {
+        lobby_message.innerText = 'No players waiting'
     }
 })
 
